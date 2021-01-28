@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"regexp"
@@ -141,7 +140,7 @@ func lookUpHost(str string) string {
 	rIP := regexp.MustCompile(`\((?P<ip>\d+\.\d+\.\d+\.\d+)\)`)
 	match := rIP.FindStringSubmatch(str)
 	if len(match) == 2 {
-		return ipToHostName(match[1])
+		return match[1]
 	}
 
 	return str
@@ -157,15 +156,6 @@ func lookUpConfig(str string) []option {
 	}
 
 	return options
-}
-
-func ipToHostName(ip string) string {
-	addr, err := net.LookupAddr(ip)
-	if err != nil {
-		return ip
-	}
-
-	return addr[0] // TODO: fix it
 }
 
 func lookUpValueOfKey(key string, configs []config) string {
