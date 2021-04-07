@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	host    string
-	port    uint
-	context string
+	host      string
+	port      uint
+	namespace string
+	version   bool
 )
 
 type config struct {
@@ -31,10 +32,16 @@ type option struct {
 
 func main() {
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
-	flag.StringVar(&host, "host", "127.0.0.1", "remote host")
-	flag.UintVar(&port, "port", 3000, "remote port")
-	flag.StringVar(&context, "context", "", "context of config, example: service, network, namespace;id=<name>, security")
+	flag.StringVar(&host, "H", "127.0.0.1", "remote host")
+	flag.UintVar(&port, "p", 3000, "remote port")
+	flag.StringVar(&namespace, "n", "", "get config of namespace")
+	flag.BoolVar(&version, "v", false, "print version and exit")
 	flag.Parse()
+
+	if version {
+		fmt.Println("v1.0.0")
+		os.Exit(0)
+	}
 
 	configs := getConfigs()
 	filtered := map[string]string{}
@@ -99,10 +106,10 @@ func getTerminalWidth() uint16 {
 
 func getConfigs() []config {
 	var cmd string
-	if context == "" {
-		cmd = fmt.Sprintf("asadm -h %s -p %d -e \"asinfo -v 'get-config:'\"", host, port)
+	if namespace != "" {
+		cmd = fmt.Sprintf("asadm -h %s -p %d -e \"asinfo -v 'get-config:context=namespace;id=%s'\"", host, port, namespace)
 	} else {
-		cmd = fmt.Sprintf("asadm -h %s -p %d -e \"asinfo -v 'get-config:context=%s'\"", host, port, context)
+		cmd = fmt.Sprintf("asadm -h %s -p %d -e \"asinfo -v 'get-config'\"", host, port)
 	}
 
 	bytes, err := exec.Command("bash", "-c", cmd).Output()
@@ -150,7 +157,9 @@ func lookUpConfig(str string) []option {
 	var options []option
 	for _, item := range strings.Split(str, ";") {
 		if len(strings.Split(item, "=")) != 2 {
-			log.Fatalln("Incorrect output from AS?")
+			log.Println("Incorrect output from AS?")
+			log.Printf("Output: %s\n", str)
+			os.Exit(1)
 		}
 		options = append(options, option{Key: strings.TrimSpace(strings.Split(item, "=")[0]), Value: strings.TrimSpace((strings.Split(item, "=")[1]))})
 	}
